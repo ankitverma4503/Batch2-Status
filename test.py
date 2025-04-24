@@ -4,7 +4,7 @@ import plotly.express as px
 import os
 
 # CONFIGURATION
-EXCEL_PATH = r"C:\Users\QS339TU\OneDrive - EY\Desktop\Anaplan inputs\Batch 2 tracker.xlsx"
+EXCEL_URL = "https://github.com/ankitverma4503/Batch2-Status/raw/main/Batch%202%20tracker.xlsx"
 SHEET_NAME = 0
 
 # COLORS
@@ -21,17 +21,17 @@ USERS = {
 
 # Load Excel
 def load_data():
-    if os.path.exists(EXCEL_PATH):
-        df = pd.read_excel(EXCEL_PATH, sheet_name=SHEET_NAME)
+    try:
+        df = pd.read_excel(EXCEL_URL, sheet_name=SHEET_NAME)
         df.columns = df.columns.str.strip()
         return df
-    else:
-        st.error("Excel file not found.")
+    except Exception as e:
+        st.error(f"Error loading Excel file: {e}")
         st.stop()
 
 def save_data(df):
     try:
-        df.to_excel(EXCEL_PATH, index=False)
+        df.to_excel(EXCEL_URL, index=False)
         st.success("✅ Updates saved!")
     except Exception as e:
         st.error(f"Error saving file: {e}")
@@ -154,10 +154,9 @@ def show_progress(df):
         barmode="stack",
         xaxis_title="Resource",
         yaxis_title="Count",
-        bargap=0.1  # Reduce the gap between bars
+        bargap=0.1
     )
 
-    # Show Bar Chart for selected mentor/week
     st.plotly_chart(bar_chart, use_container_width=True)
 
     # Bar Chart - Overall progress across all mentors and weeks
@@ -179,10 +178,9 @@ def show_progress(df):
         barmode="stack",
         xaxis_title="Mentor",
         yaxis_title="Count",
-        bargap=0.1  # Reduce the gap between bars
+        bargap=0.1
     )
 
-    # Show Overall Progress Bar Chart
     st.plotly_chart(overall_bar_chart, use_container_width=True)
 
 # MAIN
