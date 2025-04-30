@@ -13,7 +13,7 @@ GITHUB_API_URL = "https://api.github.com/repos/ankitverma4503/Batch2-Status/cont
 BRANCH_NAME = "main"
 
 # ⚠️ GitHub token (replace with your real token)
-GITHUB_TOKEN = "ghp_your_actual_github_token_here"
+GITHUB_TOKEN = "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"
 
 # COLORS
 COLOR_BG = "#000000"
@@ -232,4 +232,6 @@ if login():
 
     update_status(df)
     show_progress(df)
-if name == "main": main()
+if __name__ == "__main__":
+    main()
+
