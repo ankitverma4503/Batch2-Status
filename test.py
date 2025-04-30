@@ -6,24 +6,19 @@ import requests
 from io import BytesIO
 import base64
 
-# MUST BE FIRST STREAMLIT COMMAND
-st.set_page_config(page_title="Anaplan Batch 2 Tracker", layout="wide")
-
 # CONFIGURATION
 EXCEL_URL = "https://github.com/ankitverma4503/Batch2-Status/raw/main/Batch%202%20tracker.xlsx"
 SHEET_NAME = 0
 GITHUB_API_URL = "https://api.github.com/repos/ankitverma4503/Batch2-Status/contents/Batch%202%20tracker.xlsx"
-BRANCH_NAME = "main"
-
-# ⚠️ GitHub token (replace with your real token)
-GITHUB_TOKEN = "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"
+BRANCH_NAME = "main"  # Update if using a different branch
+GITHUB_TOKEN = "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"  # Replace this with your actual GitHub token
 
 # COLORS
 COLOR_BG = "#000000"
 COLOR_ACCENT = "#CD1C18"
 COLOR_SECONDARY = "#D3D3D3"
 TEXT_COLOR = "#FFFFFF"
-COLOR_COMPLETED = "#28A745"
+COLOR_COMPLETED = "#28A745"  # Green for Completed
 
 # USERS
 USERS = {
@@ -42,38 +37,41 @@ def load_data():
 
 def save_data(df):
     try:
+        # Convert the dataframe back to Excel file
         with BytesIO() as output:
             df.to_excel(output, index=False)
             output.seek(0)
-            file_content = output.read()
+            file_content = output.read()  # file_content is already in bytes, no need to encode
 
+        # Fetch the current file details from GitHub (for versioning)
         response = requests.get(GITHUB_API_URL, headers={"Authorization": f"token {GITHUB_TOKEN}"})
         
         if response.status_code == 200:
             file_info = response.json()
-            sha = file_info["sha"]
+            sha = file_info["sha"]  # Get the sha of the file to update
 
+            # Prepare data for GitHub API to update file
             update_data = {
                 "message": "Update tracker data",
                 "sha": sha,
-                "content": base64.b64encode(file_content).decode("utf-8"),
-                "branch": BRANCH_NAME
+                "content": base64.b64encode(file_content).decode("utf-8"),  # Base64 encode the file and decode to string
+                "branch": BRANCH_NAME  # Optionally specify the branch if necessary
             }
 
+            # Send PUT request to GitHub to update the file
             update_response = requests.put(GITHUB_API_URL, json=update_data, headers={"Authorization": f"token {GITHUB_TOKEN}"})
 
             if update_response.status_code == 200:
                 st.success("✅ Updates saved to GitHub!")
-                return True
             else:
                 st.error(f"Failed to update file on GitHub: {update_response.text}")
-                return False
+                st.error(f"GitHub API Response: {update_response.json()}")  # Log detailed error message
         else:
             st.error(f"Failed to fetch file info from GitHub: {response.text}")
-            return False
+            st.error(f"GitHub API Response: {response.json()}")  # Log detailed error message
+
     except Exception as e:
         st.error(f"Error saving file to GitHub: {e}")
-        return False
 
 # Login
 def login():
@@ -138,42 +136,43 @@ def update_status(df):
                         if st.button("💾", key=f"save_{mentor}_{i}"):
                             df.loc[(df["Mentor"] == mentor) & (df["Resource"] == row["Resource"]) & (df["Schedule"] == row["Schedule"]), "Status"] = status
                             df.loc[(df["Mentor"] == mentor) & (df["Resource"] == row["Resource"]) & (df["Schedule"] == row["Schedule"]), "Comments"] = comments
-                            if save_data(df):
-                                st.rerun()
+                            save_data(df)
                     with reset_col:
                         if st.button("♻️", key=f"reset_{mentor}_{i}"):
                             df.loc[(df["Mentor"] == mentor) & (df["Resource"] == row["Resource"]) & (df["Schedule"] == row["Schedule"]), "Status"] = ""
                             df.loc[(df["Mentor"] == mentor) & (df["Resource"] == row["Resource"]) & (df["Schedule"] == row["Schedule"]), "Comments"] = ""
-                            if save_data(df):
-                                st.rerun()
+                            save_data(df)
                     with del_col:
                         if st.button("❌", key=f"delete_{mentor}_{i}"):
                             df.drop(index=row.name, inplace=True)
                             df.reset_index(drop=True, inplace=True)
-                            if save_data(df):
-                                st.rerun()
+                            save_data(df)
+                            st.rerun()
 
     st.markdown("---")
     if st.button("🔁 Reset Entire Dashboard"):
         df["Status"] = ""
         df["Comments"] = ""
-        if save_data(df):
-            st.rerun()
+        save_data(df)
+        st.rerun()
 
 # Enhanced Charts
 def show_progress(df):
     st.subheader("📊 Progress Overview")
 
+    # Week and Mentor Filters
     st.markdown("### 📅 Filter by Week and Mentor")
     selected_week = st.selectbox("Select Week", options=["All"] + sorted(df["Schedule"].dropna().unique()), key="week_filter")
     selected_mentor = st.selectbox("Select Mentor", options=["All"] + sorted(df["Mentor"].dropna().unique()), key="mentor_filter")
 
+    # Filter data based on Week and Mentor
     filtered_df = df[df["Status"].isin(["Completed", "Not Completed"])]
     if selected_week != "All":
         filtered_df = filtered_df[filtered_df["Schedule"] == selected_week]
     if selected_mentor != "All":
         filtered_df = filtered_df[filtered_df["Mentor"] == selected_mentor]
 
+    # Bar Chart - Resources progress under selected mentor and week
     bar_data = filtered_df.groupby(["Mentor", "Resource", "Status"]).size().reset_index(name="Count")
     bar_chart = px.bar(
         bar_data,
@@ -197,6 +196,7 @@ def show_progress(df):
 
     st.plotly_chart(bar_chart, use_container_width=True)
 
+    # Bar Chart - Overall progress across all mentors and weeks
     overall_progress_data = df.groupby(["Mentor", "Status"]).size().reset_index(name="Count")
     overall_bar_chart = px.bar(
         overall_progress_data,
@@ -222,6 +222,8 @@ def show_progress(df):
 
 # MAIN
 def main():
+    st.set_page_config(page_title="Anaplan Batch 2 Tracker", layout="wide")
+
     st.markdown(
         f"""
         <div style='background-color:{COLOR_BG};padding:20px;border-radius:10px;'>
