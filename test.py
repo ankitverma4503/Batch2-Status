@@ -130,31 +130,9 @@ def update_status(df):
                         "Comment", value=row["Comments"] if pd.notna(row["Comments"]) else "",
                         key=f"comment_{mentor}_{i}"
                     )
-                with col5:
-                    save_col, reset_col, del_col = st.columns(3)
-                    with save_col:
-                        if st.button("💾", key=f"save_{mentor}_{i}"):
-                            df.loc[(df["Mentor"] == mentor) & (df["Resource"] == row["Resource"]) & (df["Schedule"] == row["Schedule"]), "Status"] = status
-                            df.loc[(df["Mentor"] == mentor) & (df["Resource"] == row["Resource"]) & (df["Schedule"] == row["Schedule"]), "Comments"] = comments
-                            save_data(df)
-                    with reset_col:
-                        if st.button("♻️", key=f"reset_{mentor}_{i}"):
-                            df.loc[(df["Mentor"] == mentor) & (df["Resource"] == row["Resource"]) & (df["Schedule"] == row["Schedule"]), "Status"] = ""
-                            df.loc[(df["Mentor"] == mentor) & (df["Resource"] == row["Resource"]) & (df["Schedule"] == row["Schedule"]), "Comments"] = ""
-                            save_data(df)
-                    with del_col:
-                        if st.button("❌", key=f"delete_{mentor}_{i}"):
-                            df.drop(index=row.name, inplace=True)
-                            df.reset_index(drop=True, inplace=True)
-                            save_data(df)
-                            st.rerun()
+                # Remove save button logic and rely on single write-back button
 
     st.markdown("---")
-    if st.button("🔁 Reset Entire Dashboard"):
-        df["Status"] = ""
-        df["Comments"] = ""
-        save_data(df)
-        st.rerun()
 
 # Enhanced Charts
 def show_progress(df):
@@ -236,6 +214,12 @@ def main():
 
         update_status(df)
         show_progress(df)
+
+        # Button to save data to GitHub and reload it instantly
+        if st.button("💾 Write Back to Excel"):
+            save_data(df)
+            df = load_data()  # Reload the data to reflect changes immediately
+            st.success("Data written back to Excel and updated in the app!")
 
 if __name__ == "__main__":
     main()
