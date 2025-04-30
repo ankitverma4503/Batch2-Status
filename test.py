@@ -1,10 +1,9 @@
 import streamlit as st
 import pandas as pd
-import base64
-import json
 import requests
 from io import BytesIO
 import plotly.express as px
+import os
 
 # CONFIGURATION
 EXCEL_URL = "https://github.com/ankitverma4503/Batch2-Status/raw/main/Batch%202%20tracker.xlsx"
@@ -22,60 +21,39 @@ USERS = {
     "admin": {"password": "anaplan@batch2@A", "role": "admin"},
 }
 
-# GitHub Repo Configuration
-GITHUB_OWNER = "ankitverma4503"
-REPO_NAME = "Batch2-Status"
-FILE_PATH = "Batch 2 tracker.xlsx"
-BRANCH = "main"
+# Access GitHub token from Streamlit secrets
+GITHUB_TOKEN = st.secrets["github"]["github_token"]
 
-GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_OWNER}/{REPO_NAME}/contents/{FILE_PATH}"
-
-# Load GitHub Token from Secrets
-GITHUB_TOKEN = st.secrets["github_token"]
-
-headers = {
-    "Authorization": f"token {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}",
-    "Accept": "application/vnd.github.v3+json"
-}
-
-# Load Excel from GitHub
-def load_excel_from_github():
-    # Fetch file details from GitHub
-    res = requests.get(GITHUB_API_URL, headers=headers)
-    
-    if res.status_code == 200:
-        content = res.json()
-        encoded = content['content']
-        decoded = base64.b64decode(encoded)
-        df = pd.read_excel(BytesIO(decoded))  # Load data into pandas DataFrame
-        sha = content['sha']  # SHA needed to update the file
-        return df, sha
-    else:
-        st.error("❌ Failed to load Excel from GitHub.")
+# Load Excel Data
+def load_data():
+    try:
+        df = load_excel_from_github(GITHUB_TOKEN, EXCEL_URL)  # Use GitHub token here
+        df.columns = df.columns.str.strip()  # Strip any unwanted spaces in column names
+        return df
+    except Exception as e:
+        st.error(f"Error loading Excel file: {e}")
         st.stop()
 
-# Save Excel back to GitHub
-def save_excel_to_github(df, sha):
-    # Convert DataFrame to Excel and then to base64
-    output = BytesIO()
-    df.to_excel(output, index=False)
-    encoded_content = base64.b64encode(output.getvalue()).decode()
-
-    # Prepare the payload to update the file in GitHub
-    payload = {
-        "message": "Update tracker.xlsx from Streamlit",
-        "content": encoded_content,
-        "branch": BRANCH,
-        "sha": sha
+# GitHub File Loading Function
+def load_excel_from_github(github_token, file_url):
+    headers = {
+        "Authorization": f"token {github_token}",  # GitHub token for authentication
+        "Accept": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     }
-
-    # PUT request to save the updated file to GitHub
-    res = requests.put(GITHUB_API_URL, headers=headers, data=json.dumps(payload))
-    
-    if res.status_code == 200 or res.status_code == 201:
-        st.success("✅ File successfully saved to GitHub!")
+    response = requests.get(file_url, headers=headers)
+    if response.status_code == 200:
+        return pd.read_excel(BytesIO(response.content))  # Load Excel file content into a DataFrame
     else:
-        st.error(f"❌ GitHub save failed: {res.status_code} - {res.text}")
+        st.error(f"Failed to fetch the file from GitHub. Status Code: {response.status_code}")
+        return None
+
+# Save Data Back to GitHub (Optional)
+def save_data(df):
+    try:
+        df.to_excel(EXCEL_URL, index=False)  # Save back to GitHub (this can also be done with an API)
+        st.success("✅ Updates saved!")
+    except Exception as e:
+        st.error(f"Error saving file: {e}")
 
 # Login
 def login():
@@ -140,28 +118,24 @@ def update_status(df):
                         if st.button("💾", key=f"save_{mentor}_{i}"):
                             df.loc[(df["Mentor"] == mentor) & (df["Resource"] == row["Resource"]) & (df["Schedule"] == row["Schedule"]), "Status"] = status
                             df.loc[(df["Mentor"] == mentor) & (df["Resource"] == row["Resource"]) & (df["Schedule"] == row["Schedule"]), "Comments"] = comments
-                            sha = df.loc[(df["Mentor"] == mentor) & (df["Resource"] == row["Resource"]) & (df["Schedule"] == row["Schedule"]), "SHA"].iloc[0]
-                            save_excel_to_github(df, sha)
+                            save_data(df)
                     with reset_col:
                         if st.button("♻️", key=f"reset_{mentor}_{i}"):
                             df.loc[(df["Mentor"] == mentor) & (df["Resource"] == row["Resource"]) & (df["Schedule"] == row["Schedule"]), "Status"] = ""
                             df.loc[(df["Mentor"] == mentor) & (df["Resource"] == row["Resource"]) & (df["Schedule"] == row["Schedule"]), "Comments"] = ""
-                            sha = df.loc[(df["Mentor"] == mentor) & (df["Resource"] == row["Resource"]) & (df["Schedule"] == row["Schedule"]), "SHA"].iloc[0]
-                            save_excel_to_github(df, sha)
+                            save_data(df)
                     with del_col:
                         if st.button("❌", key=f"delete_{mentor}_{i}"):
                             df.drop(index=row.name, inplace=True)
                             df.reset_index(drop=True, inplace=True)
-                            sha = df.loc[(df["Mentor"] == mentor) & (df["Resource"] == row["Resource"]) & (df["Schedule"] == row["Schedule"]), "SHA"].iloc[0]
-                            save_excel_to_github(df, sha)
+                            save_data(df)
                             st.rerun()
 
     st.markdown("---")
     if st.button("🔁 Reset Entire Dashboard"):
         df["Status"] = ""
         df["Comments"] = ""
-        sha = df["SHA"].iloc[0]  # Assuming the file has SHA column for each row.
-        save_excel_to_github(df, sha)
+        save_data(df)
         st.rerun()
 
 # Enhanced Charts
@@ -243,8 +217,7 @@ def main():
     )
 
     if login():
-        df, sha = load_excel_from_github()
-        df["SHA"] = sha  # Append SHA to the DataFrame for reference in updates
+        df = load_data()
         tab1, tab2 = st.tabs(["✏️ Update Tracker", "📈 Progress Overview"])
         with tab1:
             update_status(df)
