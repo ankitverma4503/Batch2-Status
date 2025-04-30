@@ -1,8 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import openpyxl
-from io import BytesIO
+import io
 
 # CONFIGURATION
 EXCEL_URL = "https://github.com/ankitverma4503/Batch2-Status/raw/main/Batch%202%20tracker.xlsx"
@@ -21,7 +20,6 @@ USERS = {
 }
 
 # Load Excel
-@st.cache_data
 def load_data():
     try:
         df = pd.read_excel(EXCEL_URL, sheet_name=SHEET_NAME)
@@ -33,16 +31,16 @@ def load_data():
 
 def save_data(df):
     try:
-        # Save to Excel
-        with BytesIO() as buffer:
-            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                df.to_excel(writer, index=False, sheet_name='Sheet1')
-            buffer.seek(0)
-            with open(EXCEL_URL, 'wb') as f:
-                f.write(buffer.read())
-        st.success("✅ Updates saved!")
+        # Save to a BytesIO buffer
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
+            df.to_excel(writer, index=False, sheet_name=SHEET_NAME)
+            writer.save()
+        buffer.seek(0)
+        return buffer
     except Exception as e:
         st.error(f"Error saving file: {e}")
+        return None
 
 # Login
 def login():
@@ -107,27 +105,37 @@ def update_status(df):
                         if st.button("💾", key=f"save_{mentor}_{i}"):
                             df.loc[(df["Mentor"] == mentor) & (df["Resource"] == row["Resource"]) & (df["Schedule"] == row["Schedule"]), "Status"] = status
                             df.loc[(df["Mentor"] == mentor) & (df["Resource"] == row["Resource"]) & (df["Schedule"] == row["Schedule"]), "Comments"] = comments
-                            save_data(df)
-                            st.experimental_rerun()
+                            buffer = save_data(df)
+                            if buffer:
+                                st.session_state.updated_file = buffer
+                                st.success("✅ Updates saved!")
                     with reset_col:
                         if st.button("♻️", key=f"reset_{mentor}_{i}"):
                             df.loc[(df["Mentor"] == mentor) & (df["Resource"] == row["Resource"]) & (df["Schedule"] == row["Schedule"]), "Status"] = ""
                             df.loc[(df["Mentor"] == mentor) & (df["Resource"] == row["Resource"]) & (df["Schedule"] == row["Schedule"]), "Comments"] = ""
-                            save_data(df)
-                            st.experimental_rerun()
+                            buffer = save_data(df)
+                            if buffer:
+                                st.session_state.updated_file = buffer
+                                st.success("✅ Updates reset!")
                     with del_col:
                         if st.button("❌", key=f"delete_{mentor}_{i}"):
                             df.drop(index=row.name, inplace=True)
                             df.reset_index(drop=True, inplace=True)
-                            save_data(df)
-                            st.experimental_rerun()
+                            buffer = save_data(df)
+                            if buffer:
+                                st.session_state.updated_file = buffer
+                                st.success("✅ Row deleted!")
+                            st.rerun()
 
     st.markdown("---")
     if st.button("🔁 Reset Entire Dashboard"):
         df["Status"] = ""
         df["Comments"] = ""
-        save_data(df)
-        st.experimental_rerun()
+        buffer = save_data(df)
+        if buffer:
+            st.session_state.updated_file = buffer
+            st.success("✅ Dashboard reset!")
+        st.rerun()
 
 # Enhanced Charts
 def show_progress(df):
@@ -136,10 +144,6 @@ def show_progress(df):
     # Week and Mentor Filters
     st.markdown("### 📅 Filter by Week and Mentor")
     selected_week = st.selectbox("Select Week", options=["All"] + sorted(df["Schedule"].dropna().unique()), key="week_filter")
-    selected_mentor = st.selectbox("Select Mentor", options=["All"] + sorted(df["Mentor"].dropna().unique()), key="mentor_filter")
-
-    # Filter data based on Week and Mentor
-    filtered_df = df[df["Status"].isin(["Completed", "Not Completed"])]
-    if selected
-::contentReference[oaicite:7]{index=7}
+    selected_mentor = st.selectbox("Select Mentor", options=["All"] + sorted(df["Mentor"].dropna().unique()), key="mentor
+::contentReference[oaicite:6]{index=6}
  
