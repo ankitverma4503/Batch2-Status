@@ -4,10 +4,14 @@ import plotly.express as px
 import os
 import requests
 from io import BytesIO
+import base64
 
 # CONFIGURATION
 EXCEL_URL = "https://github.com/ankitverma4503/Batch2-Status/raw/main/Batch%202%20tracker.xlsx"
 SHEET_NAME = 0
+GITHUB_API_URL = "https://api.github.com/repos/ankitverma4503/Batch2-Status/contents/Batch%202%20tracker.xlsx"
+BRANCH_NAME = "main"  # Update if using a different branch
+GITHUB_TOKEN = st.secrets["github"]["github_token"]  # Ensure this is set in Streamlit secrets
 
 # COLORS
 COLOR_BG = "#000000"
@@ -21,40 +25,27 @@ USERS = {
     "admin": {"password": "anaplan@batch2@A", "role": "admin"},
 }
 
-# GitHub setup
-GITHUB_TOKEN = st.secrets["github"]["github_token"]
-REPO_NAME = "Batch2-Status"
-BRANCH_NAME = "main"
-FILE_PATH = "Batch 2 tracker.xlsx"
-GITHUB_API_URL = f"https://api.github.com/repos/ankitverma4503/{REPO_NAME}/contents/{FILE_PATH}"
-
 # Load Excel
 def load_data():
     try:
-        # Fetch the latest version of the file from GitHub
-        response = requests.get(EXCEL_URL)
-        if response.status_code == 200:
-            df = pd.read_excel(BytesIO(response.content), sheet_name=SHEET_NAME)
-            df.columns = df.columns.str.strip()  # Clean column names
-            return df
-        else:
-            st.error("Error fetching the Excel file from GitHub.")
-            st.stop()
+        df = pd.read_excel(EXCEL_URL, sheet_name=SHEET_NAME)
+        df.columns = df.columns.str.strip()
+        return df
     except Exception as e:
         st.error(f"Error loading Excel file: {e}")
         st.stop()
 
-# Save Excel file back to GitHub
 def save_data(df):
     try:
         # Convert the dataframe back to Excel file
         with BytesIO() as output:
             df.to_excel(output, index=False)
             output.seek(0)
-            file_content = output.read()
+            file_content = output.read()  # file_content is already in bytes, no need to encode
 
         # Fetch the current file details from GitHub (for versioning)
         response = requests.get(GITHUB_API_URL, headers={"Authorization": f"token {GITHUB_TOKEN}"})
+        
         if response.status_code == 200:
             file_info = response.json()
             sha = file_info["sha"]  # Get the sha of the file to update
@@ -63,8 +54,8 @@ def save_data(df):
             update_data = {
                 "message": "Update tracker data",
                 "sha": sha,
-                "content": file_content.encode("base64"),  # Base64 encode the file
-                "branch": BRANCH_NAME
+                "content": base64.b64encode(file_content).decode("utf-8"),  # Base64 encode the file and decode to string
+                "branch": BRANCH_NAME  # Optionally specify the branch if necessary
             }
 
             # Send PUT request to GitHub to update the file
@@ -74,8 +65,10 @@ def save_data(df):
                 st.success("✅ Updates saved to GitHub!")
             else:
                 st.error(f"Failed to update file on GitHub: {update_response.text}")
+                st.error(f"GitHub API Response: {update_response.json()}")  # Log detailed error message
         else:
             st.error(f"Failed to fetch file info from GitHub: {response.text}")
+            st.error(f"GitHub API Response: {response.json()}")  # Log detailed error message
 
     except Exception as e:
         st.error(f"Error saving file to GitHub: {e}")
@@ -235,21 +228,14 @@ def main():
         f"""
         <div style='background-color:{COLOR_BG};padding:20px;border-radius:10px;'>
             <h1 style='color:{COLOR_ACCENT};text-align:center;'>Anaplan Learning Batch 2 Tracker</h1>
-            <p style='text-align:center;color:{TEXT_COLOR};'>Powered by <strong>Anaplan</strong></p>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+        """, unsafe_allow_html=True)
 
     if login():
         df = load_data()
-        tab1, tab2 = st.tabs(["✏️ Update Tracker", "📈 Progress Overview"])
-        with tab1:
-            update_status(df)
-        with tab2:
-            show_progress(df)
-    else:
-        st.warning("Please login as admin to access the dashboard.")
+
+        update_status(df)
+        show_progress(df)
 
 if __name__ == "__main__":
     main()
