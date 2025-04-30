@@ -6,6 +6,9 @@ import requests
 from io import BytesIO
 import base64
 
+# MUST BE FIRST STREAMLIT COMMAND
+st.set_page_config(page_title="Anaplan Batch 2 Tracker", layout="wide")
+
 # CONFIGURATION
 EXCEL_URL = "https://github.com/ankitverma4503/Batch2-Status/raw/main/Batch%202%20tracker.xlsx"
 SHEET_NAME = 0
@@ -219,19 +222,18 @@ def show_progress(df):
 
 # MAIN
 def main():
-    st.set_page_config(page_title="Anaplan Batch 2 Tracker", layout="wide")
-st.markdown(
-    f"""
-    <div style='background-color:{COLOR_BG};padding:20px;border-radius:10px;'>
-        <h1 style='color:{COLOR_ACCENT};text-align:center;'>Anaplan Learning Batch 2 Tracker</h1>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        f"""
+        <div style='background-color:{COLOR_BG};padding:20px;border-radius:10px;'>
+            <h1 style='color:{COLOR_ACCENT};text-align:center;'>Anaplan Learning Batch 2 Tracker</h1>
+        </div>
+        """, unsafe_allow_html=True)
 
-if login():
-    df = load_data()
+    if login():
+        df = load_data()
 
-    update_status(df)
-    show_progress(df)
+        update_status(df)
+        show_progress(df)
+
 if __name__ == "__main__":
     main()
-
