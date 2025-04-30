@@ -1,9 +1,9 @@
 import streamlit as st
 import pandas as pd
-import requests
-from io import BytesIO
 import plotly.express as px
 import os
+import requests
+from io import BytesIO
 
 # CONFIGURATION
 EXCEL_URL = "https://github.com/ankitverma4503/Batch2-Status/raw/main/Batch%202%20tracker.xlsx"
@@ -21,39 +21,64 @@ USERS = {
     "admin": {"password": "anaplan@batch2@A", "role": "admin"},
 }
 
-# Access GitHub token from Streamlit secrets
+# GitHub setup
 GITHUB_TOKEN = st.secrets["github"]["github_token"]
+REPO_NAME = "Batch2-Status"
+BRANCH_NAME = "main"
+FILE_PATH = "Batch 2 tracker.xlsx"
+GITHUB_API_URL = f"https://api.github.com/repos/ankitverma4503/{REPO_NAME}/contents/{FILE_PATH}"
 
-# Load Excel Data
+# Load Excel
 def load_data():
     try:
-        df = load_excel_from_github(GITHUB_TOKEN, EXCEL_URL)  # Use GitHub token here
-        df.columns = df.columns.str.strip()  # Strip any unwanted spaces in column names
-        return df
+        # Fetch the latest version of the file from GitHub
+        response = requests.get(EXCEL_URL)
+        if response.status_code == 200:
+            df = pd.read_excel(BytesIO(response.content), sheet_name=SHEET_NAME)
+            df.columns = df.columns.str.strip()  # Clean column names
+            return df
+        else:
+            st.error("Error fetching the Excel file from GitHub.")
+            st.stop()
     except Exception as e:
         st.error(f"Error loading Excel file: {e}")
         st.stop()
 
-# GitHub File Loading Function
-def load_excel_from_github(github_token, file_url):
-    headers = {
-        "Authorization": f"token {github_token}",  # GitHub token for authentication
-        "Accept": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    }
-    response = requests.get(file_url, headers=headers)
-    if response.status_code == 200:
-        return pd.read_excel(BytesIO(response.content))  # Load Excel file content into a DataFrame
-    else:
-        st.error(f"Failed to fetch the file from GitHub. Status Code: {response.status_code}")
-        return None
-
-# Save Data Back to GitHub (Optional)
+# Save Excel file back to GitHub
 def save_data(df):
     try:
-        df.to_excel(EXCEL_URL, index=False)  # Save back to GitHub (this can also be done with an API)
-        st.success("✅ Updates saved!")
+        # Convert the dataframe back to Excel file
+        with BytesIO() as output:
+            df.to_excel(output, index=False)
+            output.seek(0)
+            file_content = output.read()
+
+        # Fetch the current file details from GitHub (for versioning)
+        response = requests.get(GITHUB_API_URL, headers={"Authorization": f"token {GITHUB_TOKEN}"})
+        if response.status_code == 200:
+            file_info = response.json()
+            sha = file_info["sha"]  # Get the sha of the file to update
+
+            # Prepare data for GitHub API to update file
+            update_data = {
+                "message": "Update tracker data",
+                "sha": sha,
+                "content": file_content.encode("base64"),  # Base64 encode the file
+                "branch": BRANCH_NAME
+            }
+
+            # Send PUT request to GitHub to update the file
+            update_response = requests.put(GITHUB_API_URL, json=update_data, headers={"Authorization": f"token {GITHUB_TOKEN}"})
+
+            if update_response.status_code == 200:
+                st.success("✅ Updates saved to GitHub!")
+            else:
+                st.error(f"Failed to update file on GitHub: {update_response.text}")
+        else:
+            st.error(f"Failed to fetch file info from GitHub: {response.text}")
+
     except Exception as e:
-        st.error(f"Error saving file: {e}")
+        st.error(f"Error saving file to GitHub: {e}")
 
 # Login
 def login():
