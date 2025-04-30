@@ -6,3 +6,5 @@ pandas-datareader
 prophet
 requests
 openpyxl
+gspread
+oauth2client
