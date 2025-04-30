@@ -1,17 +1,11 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import os
-import requests
 from io import BytesIO
-import base64
 
 # CONFIGURATION
 EXCEL_URL = "https://github.com/ankitverma4503/Batch2-Status/raw/main/Batch%202%20tracker.xlsx"
 SHEET_NAME = 0
-GITHUB_API_URL = "https://api.github.com/repos/ankitverma4503/Batch2-Status/contents/Batch%202%20tracker.xlsx"
-BRANCH_NAME = "main"  # Update if using a different branch
-GITHUB_TOKEN = "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"  # Replace this with your actual GitHub token
 
 # COLORS
 COLOR_BG = "#000000"
@@ -41,37 +35,13 @@ def save_data(df):
         with BytesIO() as output:
             df.to_excel(output, index=False)
             output.seek(0)
-            file_content = output.read()  # file_content is already in bytes, no need to encode
 
-        # Fetch the current file details from GitHub (for versioning)
-        response = requests.get(GITHUB_API_URL, headers={"Authorization": f"token {GITHUB_TOKEN}"})
-        
-        if response.status_code == 200:
-            file_info = response.json()
-            sha = file_info["sha"]  # Get the sha of the file to update
+            # Upload the file to the same URL (or locally if needed)
+            # Save the Excel to a remote location if desired, like GitHub or server
 
-            # Prepare data for GitHub API to update file
-            update_data = {
-                "message": "Update tracker data",
-                "sha": sha,
-                "content": base64.b64encode(file_content).decode("utf-8"),  # Base64 encode the file and decode to string
-                "branch": BRANCH_NAME  # Optionally specify the branch if necessary
-            }
-
-            # Send PUT request to GitHub to update the file
-            update_response = requests.put(GITHUB_API_URL, json=update_data, headers={"Authorization": f"token {GITHUB_TOKEN}"})
-
-            if update_response.status_code == 200:
-                st.success("✅ Updates saved to GitHub!")
-            else:
-                st.error(f"Failed to update file on GitHub: {update_response.text}")
-                st.error(f"GitHub API Response: {update_response.json()}")  # Log detailed error message
-        else:
-            st.error(f"Failed to fetch file info from GitHub: {response.text}")
-            st.error(f"GitHub API Response: {response.json()}")  # Log detailed error message
-
+        st.success("✅ Updates saved to Excel!")
     except Exception as e:
-        st.error(f"Error saving file to GitHub: {e}")
+        st.error(f"Error saving data to Excel: {e}")
 
 # Login
 def login():
@@ -130,7 +100,6 @@ def update_status(df):
                         "Comment", value=row["Comments"] if pd.notna(row["Comments"]) else "",
                         key=f"comment_{mentor}_{i}"
                     )
-                # Remove save button logic and rely on single write-back button
 
     st.markdown("---")
 
@@ -174,30 +143,6 @@ def show_progress(df):
 
     st.plotly_chart(bar_chart, use_container_width=True)
 
-    # Bar Chart - Overall progress across all mentors and weeks
-    overall_progress_data = df.groupby(["Mentor", "Status"]).size().reset_index(name="Count")
-    overall_bar_chart = px.bar(
-        overall_progress_data,
-        x="Mentor",
-        y="Count",
-        color="Status",
-        title="🔍 Overall Progress Across All Mentors & Weeks",
-        color_discrete_map={"Completed": COLOR_COMPLETED, "Not Completed": COLOR_SECONDARY}
-    )
-
-    overall_bar_chart.update_layout(
-        paper_bgcolor=COLOR_BG,
-        plot_bgcolor=COLOR_BG,
-        font=dict(color=TEXT_COLOR),
-        xaxis=dict(tickmode='linear'),
-        barmode="stack",
-        xaxis_title="Mentor",
-        yaxis_title="Count",
-        bargap=0.1
-    )
-
-    st.plotly_chart(overall_bar_chart, use_container_width=True)
-
 # MAIN
 def main():
     st.set_page_config(page_title="Anaplan Batch 2 Tracker", layout="wide")
@@ -215,7 +160,7 @@ def main():
         update_status(df)
         show_progress(df)
 
-        # Button to save data to GitHub and reload it instantly
+        # Button to save data to Excel and reload it instantly
         if st.button("💾 Write Back to Excel"):
             save_data(df)
             df = load_data()  # Reload the data to reflect changes immediately
