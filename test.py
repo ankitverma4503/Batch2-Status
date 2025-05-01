@@ -81,22 +81,19 @@ def update_status(df, selected_mentor, selected_week):
 
 # === Chart visuals ===
 def plot_completion_charts(df, selected_mentor, selected_week):
-    # Filter by mentor and week
+    # First Graph: Resource-wise completion status where Mentor and Week are filters
     df_filtered = df[(df["Mentor"] == selected_mentor) & (df["Schedule"] == selected_week)]
-
-    # First Graph: Resources on x-axis and Schedule on y-axis
     df_bar = df_filtered.groupby(["Resource", "Schedule", "Status"]).size().reset_index(name="Count")
     
     bar_chart = px.bar(
         df_bar,
         x="Resource",
-        y="Schedule",
+        y="Count",
         color="Status",
-        title="📊 Completion Status by Resource and Week",
+        title="📊 Completion Status by Resource (Filtered by Mentor and Week)",
         color_discrete_map={"Completed": "green", "Not Completed": "#FF6347"},
         barmode="stack",
-        labels={"Status": "Completion Status"},
-        category_orders={"Status": ["Completed", "Not Completed"]}
+        labels={"Status": "Completion Status"}
     )
     
     bar_chart.update_layout(
@@ -104,21 +101,21 @@ def plot_completion_charts(df, selected_mentor, selected_week):
         plot_bgcolor=COLOR_BG,
         font=dict(color=TEXT_COLOR),
         xaxis_title="Resource",
-        yaxis_title="Schedule",
+        yaxis_title="Count",
         title_x=0.5,
         title_y=0.95,
         title_font=dict(size=20),
     )
 
-    # Second Graph: Mentor-wise Completion (Bar Chart) with Weeks on y-axis
-    df_mentor = df_filtered.groupby(["Mentor", "Schedule", "Status"]).size().reset_index(name="Count")
+    # Second Graph: Mentor-wise completion status across all weeks (aggregated)
+    df_mentor = df.groupby(["Mentor", "Status"]).size().reset_index(name="Count")
     
     mentor_chart = px.bar(
         df_mentor,
         x="Mentor",
         y="Count",
         color="Status",
-        title="🎯 Mentor-wise Completion Status (Weeks Included)",
+        title="🎯 Mentor-wise Completion Status (Aggregated)",
         color_discrete_map={"Completed": "green", "Not Completed": "#FF6347"},
         barmode="stack",
         labels={"Status": "Completion Status"}
@@ -129,7 +126,7 @@ def plot_completion_charts(df, selected_mentor, selected_week):
         plot_bgcolor=COLOR_BG,
         font=dict(color=TEXT_COLOR),
         xaxis_title="Mentor",
-        yaxis_title="Week-wise Count of Completion Status",
+        yaxis_title="Count",
         title_x=0.5,
         title_y=0.95,
         title_font=dict(size=20),
@@ -156,16 +153,18 @@ def show_progress(df):
 def main():
     st.set_page_config(page_title="Anaplan Batch 2 Tracker", layout="wide")
 
+    # Adding a logo above the title (using the provided URL)
     st.markdown(
         f"""
-        <div style='background-color:{COLOR_BG};padding:20px;border-radius:10px;'">
+        <div style='text-align:center;'>
+            <img src='https://rb.gy/ilooum' width='200'/>
             <h1 style='color:{COLOR_ACCENT};text-align:center;'>Anaplan Learning Batch 2 Tracker</h1>
         </div>
         """,
         unsafe_allow_html=True
     )
 
-    user, role = login()  # Removed the extra parenthesis here
+    user, role = login()  # Fixed the syntax here
     if user and role == "admin":
         logout_button()
         df = load_data()
