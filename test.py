@@ -4,7 +4,7 @@ import plotly.express as px
 
 # === CONFIGURATION ===
 GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1NThKamueqtVdkUIAQTEM8LpO9HThCUGIw47Qvi4XEao/edit?usp=sharing"
-SHEET_NAME = "Sheet1"  # Ensure this matches your sheet tab name
+SHEET_NAME = "Sheet1"
 
 # COLORS
 COLOR_BG = "#000000"
@@ -14,7 +14,7 @@ TEXT_COLOR = "#FFFFFF"
 
 # USERS - Only admin user allowed
 USERS = {
-    "admin": {"password": "admin123", "role": "admin"},
+    "admin": {"password": "anaplan@batch2@A", "role": "admin"},
 }
 
 # === Helper: Get CSV export URL ===
@@ -23,25 +23,40 @@ def get_csv_url(sheet_url, sheet_name):
     return f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
 
 # === Load data from Google Sheet ===
-@st.cache_data(ttl=30)  # refresh every 30 seconds
+@st.cache_data(ttl=30)
 def load_data():
     csv_url = get_csv_url(GOOGLE_SHEET_URL, SHEET_NAME)
     df = pd.read_csv(csv_url)
-    df.columns = df.columns.str.strip()  # clean column names
+    df.columns = df.columns.str.strip()
+    # Normalize 'Status' column
+    df['Status'] = df['Status'].fillna('').str.strip().str.lower().map(lambda x: 'Completed' if 'completed' in x and 'not' not in x else 'Not Completed')
     return df.copy()
 
 # === Login system ===
 def login():
+    if 'logged_in' not in st.session_state:
+        st.session_state.logged_in = False
+
+    if st.session_state.logged_in:
+        return "admin", "admin"
+
     st.sidebar.title("🔐 Login")
     username = st.sidebar.text_input("Username")
     password = st.sidebar.text_input("Password", type="password")
     if st.sidebar.button("Login"):
         user = USERS.get(username)
         if user and user["password"] == password:
+            st.session_state.logged_in = True
             return username, user["role"]
         else:
             st.sidebar.error("Invalid username or password.")
     return None, None
+
+# === Logout system ===
+def logout_button():
+    if st.sidebar.button("🚪 Logout"):
+        st.session_state.logged_in = False
+        st.experimental_rerun()
 
 # === Update tracker (Read-only view) ===
 def update_status(df):
@@ -76,27 +91,37 @@ def update_status(df):
 # === Chart visuals ===
 def plot_completion_charts(df):
     df_filtered = df[df["Status"].isin(["Completed", "Not Completed"])]
-    df_grouped = df_filtered.groupby(["Schedule", "Status"]).size().reset_index(name="Count")
+
+    # Bar Chart: Resource-wise completion
+    df_bar = df_filtered.groupby(["Resource", "Schedule", "Mentor", "Status"]).size().reset_index(name="Count")
 
     bar_chart = px.bar(
-        df_grouped,
-        x="Schedule",
+        df_bar,
+        x="Resource",
         y="Count",
         color="Status",
-        title="📊 Completion by Week",
-        color_discrete_sequence=[COLOR_ACCENT, COLOR_SECONDARY]
+        title="📊 Completion Status by Resource",
+        color_discrete_map={"Completed": "green", "Not Completed": "red"},
+        barmode="group",
+        facet_col="Schedule",
     )
 
-    pie_data = df_filtered["Status"].value_counts().reset_index()
-    pie_data.columns = ["Status", "Count"]
+    # Pie Chart: Mentor-wise performance by week
+    df_pie = df_filtered.groupby(["Mentor", "Schedule", "Status"]).size().reset_index(name="Count")
+    df_pie["Mentor_Week"] = df_pie["Mentor"] + " - " + df_pie["Schedule"]
+
     pie_chart = px.pie(
-        pie_data,
+        df_pie,
         names="Status",
         values="Count",
-        title="🎯 Overall Completion Distribution",
-        color_discrete_sequence=[COLOR_ACCENT, COLOR_SECONDARY]
+        title="🎯 Mentor-wise Completion by Week",
+        color="Status",
+        color_discrete_map={"Completed": "green", "Not Completed": "red"},
+        hole=0.4,
+        facet_col="Mentor_Week",
     )
 
+    # Chart layout formatting
     bar_chart.update_layout(
         paper_bgcolor=COLOR_BG,
         plot_bgcolor=COLOR_BG,
@@ -134,12 +159,8 @@ def main():
 
     user, role = login()
     if user and role == "admin":
+        logout_button()
         df = load_data()
-
-        # Optional: Manual refresh
-        if st.button("🔄 Refresh Now"):
-            st.cache_data.clear()
-            st.experimental_rerun()
 
         tab1, tab2 = st.tabs(["✏️ Tracker View", "📊 Progress Overview"])
         with tab1:
