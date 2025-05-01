@@ -54,15 +54,6 @@ def login():
             st.sidebar.error("Invalid username or password.")
     return None, None
 
-# === Logout system ===
-def logout_button():
-    if st.sidebar.button("🚪 Logout"):
-        # Clear the session state to log out
-        st.session_state.logged_in = False
-        # Clear all session state data related to the app (this may be necessary if there are cached states)
-        st.session_state.clear()  
-        st.stop()  # Stop the script execution after logout
-
 # === Update tracker (Read-only view) ===
 def update_status(df, selected_mentor, selected_week):
     st.subheader("✍️ Tracker View (Read-Only)")
@@ -169,7 +160,6 @@ def main():
 
     user, role = login()  # Fixed the syntax here
     if user and role == "admin":  # Ensure user is not None and role is "admin"
-        logout_button()
         df = load_data()
 
         tab1, tab2 = st.tabs(["✏️ Tracker View", "📊 Progress Overview"])
