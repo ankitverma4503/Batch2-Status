@@ -169,7 +169,7 @@ def main():
     )
 
     user, role = login()  # Fixed the syntax here
-    if user and role == "admin":
+    if user and role == "admin":  # Ensure user is not None and role is "admin"
         logout_button()
         df = load_data()
 
