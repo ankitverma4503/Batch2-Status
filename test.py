@@ -28,6 +28,7 @@ def load_data():
     csv_url = get_csv_url(GOOGLE_SHEET_URL, SHEET_NAME)
     df = pd.read_csv(csv_url)
     df.columns = df.columns.str.strip()
+    
     # Normalize 'Status' column to case-insensitive
     df['Status'] = df['Status'].fillna('').str.strip().str.lower().map(lambda x: 'Completed' if 'completed' in x and 'not' not in x else 'Not Completed')
     return df.copy()
@@ -85,9 +86,10 @@ def update_status(df):
 
 # === Chart visuals ===
 def plot_completion_charts(df):
+    # First Graph: Resource Completion by Week (Stacked Bar)
     df_filtered = df[df["Status"].isin(["Completed", "Not Completed"])]
     
-    # First Graph: Resource-wise completion by week (stacked bar)
+    # Group by Resource, Week (Schedule) and Status
     df_bar = df_filtered.groupby(["Resource", "Schedule", "Status"]).size().reset_index(name="Count")
     
     bar_chart = px.bar(
@@ -102,7 +104,6 @@ def plot_completion_charts(df):
         category_orders={"Status": ["Completed", "Not Completed"]}
     )
     
-    # Customizing bar chart appearance
     bar_chart.update_layout(
         paper_bgcolor=COLOR_BG,
         plot_bgcolor=COLOR_BG,
@@ -114,38 +115,40 @@ def plot_completion_charts(df):
         title_font=dict(size=20),
     )
 
-    # Second Graph: Mentor-wise completion across all weeks
-    df_pie = df_filtered.groupby(["Mentor", "Status"]).size().reset_index(name="Count")
+    # Second Graph: Mentor-wise Completion (Bar Chart)
+    df_mentor = df_filtered.groupby(["Mentor", "Status"]).size().reset_index(name="Count")
     
-    pie_chart = px.pie(
-        df_pie,
-        names="Status",
-        values="Count",
-        title="🎯 Mentor-wise Completion Status (Across All Weeks)",
+    mentor_chart = px.bar(
+        df_mentor,
+        x="Mentor",
+        y="Count",
         color="Status",
+        title="🎯 Mentor-wise Completion Status (Across All Weeks)",
         color_discrete_map={"Completed": "green", "Not Completed": "red"},
-        hole=0.4
+        barmode="stack",
+        labels={"Status": "Completion Status"}
     )
     
-    # Customizing pie chart appearance
-    pie_chart.update_layout(
+    mentor_chart.update_layout(
         paper_bgcolor=COLOR_BG,
         plot_bgcolor=COLOR_BG,
         font=dict(color=TEXT_COLOR),
+        xaxis_title="Mentor",
+        yaxis_title="Count of Resources",
         title_x=0.5,
         title_y=0.95,
         title_font=dict(size=20),
     )
 
-    return bar_chart, pie_chart
+    return bar_chart, mentor_chart
 
 # === Show progress ===
 def show_progress(df):
     st.subheader("📈 Progress Overview")
 
-    bar, pie = plot_completion_charts(df)
+    bar, mentor_bar = plot_completion_charts(df)
     st.plotly_chart(bar, use_container_width=True)
-    st.plotly_chart(pie, use_container_width=True)
+    st.plotly_chart(mentor_bar, use_container_width=True)
 
 # === MAIN APP ===
 def main():
