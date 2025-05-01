@@ -14,7 +14,7 @@ TEXT_COLOR = "#FFFFFF"
 
 # USERS - Only admin user allowed
 USERS = {
-    "admin": {"password": "anaplan@batch2@A", "role": "admin"},
+    "admin": {"password": "admin123", "role": "admin"},
 }
 
 # === Helper: Get CSV export URL ===
@@ -91,10 +91,10 @@ def update_status(df):
 # === Chart visuals ===
 def plot_completion_charts(df):
     df_filtered = df[df["Status"].isin(["Completed", "Not Completed"])]
-
-    # Bar Chart: Resource-wise completion
+    
+    # Bar Chart: Resource-wise completion (stacked bar)
     df_bar = df_filtered.groupby(["Resource", "Schedule", "Mentor", "Status"]).size().reset_index(name="Count")
-
+    
     bar_chart = px.bar(
         df_bar,
         x="Resource",
@@ -102,35 +102,44 @@ def plot_completion_charts(df):
         color="Status",
         title="📊 Completion Status by Resource",
         color_discrete_map={"Completed": "green", "Not Completed": "red"},
-        barmode="group",
-        facet_col="Schedule",
+        barmode="stack",
+        labels={"Status": "Completion Status"},
+        category_orders={"Status": ["Completed", "Not Completed"]}
+    )
+    
+    # Customizing bar chart appearance
+    bar_chart.update_layout(
+        paper_bgcolor=COLOR_BG,
+        plot_bgcolor=COLOR_BG,
+        font=dict(color=TEXT_COLOR),
+        xaxis_title="Resource",
+        yaxis_title="Count of Completion Status",
+        title_x=0.5,
+        title_y=0.95,
+        title_font=dict(size=20),
     )
 
-    # Pie Chart: Mentor-wise performance by week
-    df_pie = df_filtered.groupby(["Mentor", "Schedule", "Status"]).size().reset_index(name="Count")
-    df_pie["Mentor_Week"] = df_pie["Mentor"] + " - " + df_pie["Schedule"]
-
+    # Pie Chart: Overall performance by status across all resources
+    df_pie = df_filtered.groupby(["Status"]).size().reset_index(name="Count")
+    
     pie_chart = px.pie(
         df_pie,
         names="Status",
         values="Count",
-        title="🎯 Mentor-wise Completion by Week",
+        title="🎯 Overall Completion Status",
         color="Status",
         color_discrete_map={"Completed": "green", "Not Completed": "red"},
-        hole=0.4,
-        facet_col="Mentor_Week",
+        hole=0.4
     )
-
-    # Chart layout formatting
-    bar_chart.update_layout(
-        paper_bgcolor=COLOR_BG,
-        plot_bgcolor=COLOR_BG,
-        font=dict(color=TEXT_COLOR)
-    )
+    
+    # Customizing pie chart appearance
     pie_chart.update_layout(
         paper_bgcolor=COLOR_BG,
         plot_bgcolor=COLOR_BG,
-        font=dict(color=TEXT_COLOR)
+        font=dict(color=TEXT_COLOR),
+        title_x=0.5,
+        title_y=0.95,
+        title_font=dict(size=20),
     )
 
     return bar_chart, pie_chart
