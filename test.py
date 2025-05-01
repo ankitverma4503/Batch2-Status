@@ -57,7 +57,11 @@ def login():
 # === Logout system ===
 def logout_button():
     if st.sidebar.button("🚪 Logout"):
+        # Clear the session state to log out
         st.session_state.logged_in = False
+        # Clear all session state data related to the app (this may be necessary if there are cached states)
+        st.session_state.clear()  
+        # Optionally reset the entire page
         st.experimental_rerun()
 
 # === Update tracker (Read-only view) ===
