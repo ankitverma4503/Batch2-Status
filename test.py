@@ -45,9 +45,6 @@ def login():
     username = st.sidebar.text_input("Username")
     password = st.sidebar.text_input("Password", type="password")
     
-    # Corrected Anaplan logo (using the new URL you provided)
-    st.sidebar.image("https://rb.gy/ilooum", width=150)
-    
     if st.sidebar.button("Login"):
         user = USERS.get(username)
         if user and user["password"] == password:
@@ -144,12 +141,12 @@ def plot_completion_charts(df, selected_mentor, selected_week):
 def show_progress(df):
     st.subheader("📈 Progress Overview")
 
-    # Filters for Mentor and Week
+    # Filters for Mentor and Week with unique keys for each selectbox
     mentors = df["Mentor"].dropna().unique()
-    selected_mentor = st.selectbox("Select Mentor", mentors)
+    selected_mentor = st.selectbox("Select Mentor", mentors, key="mentor_selectbox")
     
     schedules = df["Schedule"].dropna().unique()
-    selected_week = st.selectbox("Select Week", schedules)
+    selected_week = st.selectbox("Select Week", schedules, key="week_selectbox")
 
     bar, mentor_bar = plot_completion_charts(df, selected_mentor, selected_week)
     st.plotly_chart(bar, use_container_width=True)
@@ -168,15 +165,15 @@ def main():
         unsafe_allow_html=True
     )
 
-    user, role = login()
+    user, role = login(
     if user and role == "admin":
         logout_button()
         df = load_data()
 
         tab1, tab2 = st.tabs(["✏️ Tracker View", "📊 Progress Overview"])
         with tab1:
-            selected_mentor = st.selectbox("Select Mentor", df["Mentor"].dropna().unique())
-            selected_week = st.selectbox("Select Week", df["Schedule"].dropna().unique())
+            selected_mentor = st.selectbox("Select Mentor", df["Mentor"].dropna().unique(), key="mentor_selectbox_tab1")
+            selected_week = st.selectbox("Select Week", df["Schedule"].dropna().unique(), key="week_selectbox_tab1")
             update_status(df, selected_mentor, selected_week)
         with tab2:
             show_progress(df)
