@@ -14,7 +14,7 @@ TEXT_COLOR = "#000000"  # Dark text color
 
 # USERS - Only admin user allowed
 USERS = {
-    "admin": {"password": "admin123", "role": "admin"},
+    "admin": {"password": "anaplan@batch2@A", "role": "admin"},
 }
 
 # === Helper: Get CSV export URL ===
@@ -162,7 +162,7 @@ def main():
         f"""
         <div style='background-color:{COLOR_BG};padding:20px;border-radius:10px;'>
             <h1 style='color:{COLOR_ACCENT};text-align:center;'>Anaplan Learning Batch 2 Tracker</h1>
-            <p style='text-align:center;color:{TEXT_COLOR};'>Powered by <strong>Ankit</strong></p>
+            <p style='text-align:center;color:{TEXT_COLOR};'>Powered by <strong>Anaplan</strong></p>
         </div>
         """,
         unsafe_allow_html=True
