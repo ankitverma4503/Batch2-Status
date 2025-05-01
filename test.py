@@ -27,7 +27,7 @@ def get_csv_url(sheet_url, sheet_name):
 def load_data():
     csv_url = get_csv_url(GOOGLE_SHEET_URL, SHEET_NAME)
     df = pd.read_csv(csv_url)
-    df.columns = df.columns.str.strip()
+    df.columns = df.columns.str.strip()  # Strip any leading/trailing spaces from column names
     
     # Normalize 'Status' column to case-insensitive
     df['Status'] = df['Status'].fillna('').str.strip().str.lower().map(lambda x: 'Completed' if 'completed' in x and 'not' not in x else 'Not Completed')
@@ -45,8 +45,8 @@ def login():
     username = st.sidebar.text_input("Username")
     password = st.sidebar.text_input("Password", type="password")
     
-    # Corrected Anaplan logo (centered above the title)
-    st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Anaplan_logo.svg/1280px-Anaplan_logo.svg.png", width=150)
+    # Corrected Anaplan logo (using the new URL you provided)
+    st.sidebar.image("https://rb.gy/ilooum", width=150)
     
     if st.sidebar.button("Login"):
         user = USERS.get(username)
