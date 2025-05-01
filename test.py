@@ -6,11 +6,11 @@ import plotly.express as px
 GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1NThKamueqtVdkUIAQTEM8LpO9HThCUGIw47Qvi4XEao/edit?usp=sharing"
 SHEET_NAME = "Sheet1"
 
-# COLORS
-COLOR_BG = "#000000"
-COLOR_ACCENT = "#CD1C18"
-COLOR_SECONDARY = "#D3D3D3"
-TEXT_COLOR = "#FFFFFF"
+# COLORS for better visibility
+COLOR_BG = "#FFFFFF"  # White background for better contrast
+COLOR_ACCENT = "#1E90FF"  # Blue for accents
+COLOR_SECONDARY = "#FF6347"  # Tomato red for secondary color (for Not Completed)
+TEXT_COLOR = "#000000"  # Black text for visibility
 
 # USERS - Only admin user allowed
 USERS = {
@@ -28,7 +28,7 @@ def load_data():
     csv_url = get_csv_url(GOOGLE_SHEET_URL, SHEET_NAME)
     df = pd.read_csv(csv_url)
     df.columns = df.columns.str.strip()
-    
+
     # Normalize 'Status' column to case-insensitive
     df['Status'] = df['Status'].fillna('').str.strip().str.lower().map(lambda x: 'Completed' if 'completed' in x and 'not' not in x else 'Not Completed')
     return df.copy()
@@ -86,21 +86,22 @@ def update_status(df):
 
 # === Chart visuals ===
 def plot_completion_charts(df):
-    # First Graph: Resource Completion by Week (Stacked Bar)
+    # First Graph: Completion by Week
     df_filtered = df[df["Status"].isin(["Completed", "Not Completed"])]
     
-    # Group by Resource, Week (Schedule) and Status
-    df_bar = df_filtered.groupby(["Resource", "Schedule", "Status"]).size().reset_index(name="Count")
+    # Group by Week and Status (Completed vs Not Completed)
+    df_bar = df_filtered.groupby(["Schedule", "Status"]).size().reset_index(name="Count")
     
+    # Plot bar chart: Week on Y-axis, Count of Completion Status on X-axis
     bar_chart = px.bar(
         df_bar,
-        x="Resource",
-        y="Count",
+        y="Schedule",
+        x="Count",
         color="Status",
-        title="📊 Completion Status by Resource (Week-wise)",
-        color_discrete_map={"Completed": "green", "Not Completed": "red"},
+        title="📊 Completion Status by Week (Count)",
+        color_discrete_map={"Completed": COLOR_ACCENT, "Not Completed": COLOR_SECONDARY},
         barmode="stack",
-        labels={"Status": "Completion Status"},
+        labels={"Status": "Completion Status", "Count": "Count of Completion"},
         category_orders={"Status": ["Completed", "Not Completed"]}
     )
     
@@ -108,23 +109,25 @@ def plot_completion_charts(df):
         paper_bgcolor=COLOR_BG,
         plot_bgcolor=COLOR_BG,
         font=dict(color=TEXT_COLOR),
-        xaxis_title="Resource",
-        yaxis_title="Count of Completion Status",
+        yaxis_title="Week",
+        xaxis_title="Count of Completion Status",
         title_x=0.5,
         title_y=0.95,
         title_font=dict(size=20),
+        xaxis=dict(showgrid=True),
+        yaxis=dict(showgrid=True)
     )
 
-    # Second Graph: Mentor-wise Completion (Bar Chart)
-    df_mentor = df_filtered.groupby(["Mentor", "Status"]).size().reset_index(name="Count")
+    # Second Graph: Mentor-wise Completion by Week
+    df_mentor = df_filtered.groupby(["Mentor", "Schedule", "Status"]).size().reset_index(name="Count")
     
     mentor_chart = px.bar(
         df_mentor,
-        x="Mentor",
-        y="Count",
-        color="Status",
-        title="🎯 Mentor-wise Completion Status (Across All Weeks)",
-        color_discrete_map={"Completed": "green", "Not Completed": "red"},
+        y="Schedule",
+        x="Count",
+        color="Mentor",
+        title="🎯 Mentor-wise Completion Status (by Week)",
+        color_discrete_sequence=px.colors.qualitative.Set1,
         barmode="stack",
         labels={"Status": "Completion Status"}
     )
@@ -133,11 +136,13 @@ def plot_completion_charts(df):
         paper_bgcolor=COLOR_BG,
         plot_bgcolor=COLOR_BG,
         font=dict(color=TEXT_COLOR),
-        xaxis_title="Mentor",
-        yaxis_title="Count of Resources",
+        yaxis_title="Week",
+        xaxis_title="Count of Resources Completed",
         title_x=0.5,
         title_y=0.95,
         title_font=dict(size=20),
+        xaxis=dict(showgrid=True),
+        yaxis=dict(showgrid=True)
     )
 
     return bar_chart, mentor_chart
@@ -156,9 +161,9 @@ def main():
 
     st.markdown(
         f"""
-        <div style='background-color:{COLOR_BG};padding:20px;border-radius:10px;'>
-            <h1 style='color:{COLOR_ACCENT};text-align:center;'>Anaplan Learning Batch 2 Tracker</h1>
-            <p style='text-align:center;color:{TEXT_COLOR};'>Powered by <strong>Ankit</strong></p>
+        <div style='background-color:{COLOR_ACCENT};padding:20px;border-radius:10px;'>
+            <h1 style='color:#FFFFFF;text-align:center;'>Anaplan Learning Batch 2 Tracker</h1>
+            <p style='text-align:center;color:#FFFFFF;'>Powered by <strong>Ankit</strong></p>
         </div>
         """,
         unsafe_allow_html=True
