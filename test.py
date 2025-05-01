@@ -28,7 +28,7 @@ def load_data():
     csv_url = get_csv_url(GOOGLE_SHEET_URL, SHEET_NAME)
     df = pd.read_csv(csv_url)
     df.columns = df.columns.str.strip()
-    # Normalize 'Status' column
+    # Normalize 'Status' column to case-insensitive
     df['Status'] = df['Status'].fillna('').str.strip().str.lower().map(lambda x: 'Completed' if 'completed' in x and 'not' not in x else 'Not Completed')
     return df.copy()
 
@@ -63,28 +63,23 @@ def update_status(df):
     st.subheader("✍️ Tracker View (Read-Only)")
     mentors = df["Mentor"].dropna().unique()
 
-    for mentor in mentors:
-        with st.expander(f"👨‍🏫 Mentor: {mentor}", expanded=False):
-            mentor_df = df[df["Mentor"] == mentor].reset_index(drop=True)
-            schedules = mentor_df["Schedule"].dropna().unique()
+    selected_mentor = st.selectbox("Select Mentor", mentors)
+    schedules = df["Schedule"].dropna().unique()
+    selected_week = st.selectbox("Select Week", schedules)
 
-            selected_schedule = st.selectbox(
-                f"Select Week for {mentor}", schedules, key=f"week_{mentor}"
-            )
+    filtered_df = df[(df["Mentor"] == selected_mentor) & (df["Schedule"] == selected_week)]
 
-            filtered_df = mentor_df[mentor_df["Schedule"] == selected_schedule]
-
-            for i, row in filtered_df.iterrows():
-                col1, col2, col3, col4 = st.columns([2, 2, 2, 4])
-                with col1:
-                    st.markdown(f"**👤 {row['Resource']}**")
-                with col2:
-                    st.markdown(f"📅 Week: `{row['Schedule']}`")
-                with col3:
-                    st.markdown(f"📌 Status: `{row['Status']}`")
-                with col4:
-                    comment = row['Comments'] if pd.notna(row['Comments']) else "—"
-                    st.markdown(f"💬 Comment: {comment}")
+    for i, row in filtered_df.iterrows():
+        col1, col2, col3, col4 = st.columns([2, 2, 2, 4])
+        with col1:
+            st.markdown(f"**👤 {row['Resource']}**")
+        with col2:
+            st.markdown(f"📅 Week: `{row['Schedule']}`")
+        with col3:
+            st.markdown(f"📌 Status: `{row['Status']}`")
+        with col4:
+            comment = row['Comments'] if pd.notna(row['Comments']) else "—"
+            st.markdown(f"💬 Comment: {comment}")
 
     st.info("This is a live view from Google Sheet. Edit data directly in the Sheet.")
 
@@ -92,15 +87,15 @@ def update_status(df):
 def plot_completion_charts(df):
     df_filtered = df[df["Status"].isin(["Completed", "Not Completed"])]
     
-    # Bar Chart: Resource-wise completion (stacked bar)
-    df_bar = df_filtered.groupby(["Resource", "Schedule", "Mentor", "Status"]).size().reset_index(name="Count")
+    # First Graph: Resource-wise completion by week (stacked bar)
+    df_bar = df_filtered.groupby(["Resource", "Schedule", "Status"]).size().reset_index(name="Count")
     
     bar_chart = px.bar(
         df_bar,
         x="Resource",
         y="Count",
         color="Status",
-        title="📊 Completion Status by Resource",
+        title="📊 Completion Status by Resource (Week-wise)",
         color_discrete_map={"Completed": "green", "Not Completed": "red"},
         barmode="stack",
         labels={"Status": "Completion Status"},
@@ -119,14 +114,14 @@ def plot_completion_charts(df):
         title_font=dict(size=20),
     )
 
-    # Pie Chart: Overall performance by status across all resources
-    df_pie = df_filtered.groupby(["Status"]).size().reset_index(name="Count")
+    # Second Graph: Mentor-wise completion across all weeks
+    df_pie = df_filtered.groupby(["Mentor", "Status"]).size().reset_index(name="Count")
     
     pie_chart = px.pie(
         df_pie,
         names="Status",
         values="Count",
-        title="🎯 Overall Completion Status",
+        title="🎯 Mentor-wise Completion Status (Across All Weeks)",
         color="Status",
         color_discrete_map={"Completed": "green", "Not Completed": "red"},
         hole=0.4
