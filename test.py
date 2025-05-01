@@ -165,7 +165,7 @@ def main():
         unsafe_allow_html=True
     )
 
-    user, role = login(
+    user, role = login()  # Removed the extra parenthesis here
     if user and role == "admin":
         logout_button()
         df = load_data()
