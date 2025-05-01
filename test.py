@@ -157,7 +157,16 @@ def show_progress(df):
 def main():
     st.set_page_config(page_title="Anaplan Batch 2 Tracker", layout="wide")
 
-    # Removed logo part as requested
+    # Header without logo but with title
+    st.markdown(
+        f"""
+        <div style='background-color:{COLOR_BG};padding:20px;border-radius:10px;'>
+            <h1 style='color:{COLOR_ACCENT};text-align:center;'>Anaplan Learning Batch 2 Tracker</h1>
+            <p style='text-align:center;color:{TEXT_COLOR};'>Powered by <strong>Ankit</strong></p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     user, role = login()  # Fixed the syntax here
     if user and role == "admin":
