@@ -61,8 +61,7 @@ def logout_button():
         st.session_state.logged_in = False
         # Clear all session state data related to the app (this may be necessary if there are cached states)
         st.session_state.clear()  
-        # Refresh the page by just resetting the session state, without using st.experimental_rerun()
-        st.stop()
+        st.stop()  # Stop the script execution after logout
 
 # === Update tracker (Read-only view) ===
 def update_status(df, selected_mentor, selected_week):
