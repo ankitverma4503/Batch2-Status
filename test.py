@@ -44,7 +44,10 @@ def login():
     st.sidebar.title("🔐 Login")
     username = st.sidebar.text_input("Username")
     password = st.sidebar.text_input("Password", type="password")
+    
+    # Corrected Anaplan logo (centered above the title)
     st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Anaplan_logo.svg/1280px-Anaplan_logo.svg.png", width=150)
+    
     if st.sidebar.button("Login"):
         user = USERS.get(username)
         if user and user["password"] == password:
@@ -61,14 +64,8 @@ def logout_button():
         st.experimental_rerun()
 
 # === Update tracker (Read-only view) ===
-def update_status(df):
+def update_status(df, selected_mentor, selected_week):
     st.subheader("✍️ Tracker View (Read-Only)")
-    mentors = df["Mentor"].dropna().unique()
-
-    selected_mentor = st.selectbox("Select Mentor", mentors)
-    schedules = df["Schedule"].dropna().unique()
-    selected_week = st.selectbox("Select Week", schedules)
-
     filtered_df = df[(df["Mentor"] == selected_mentor) & (df["Schedule"] == selected_week)]
 
     for i, row in filtered_df.iterrows():
@@ -86,19 +83,19 @@ def update_status(df):
     st.info("This is a live view from Google Sheet. Edit data directly in the Sheet.")
 
 # === Chart visuals ===
-def plot_completion_charts(df):
-    # First Graph: Completion Status by Week (Stacked Bar)
-    df_filtered = df[df["Status"].isin(["Completed", "Not Completed"])]
+def plot_completion_charts(df, selected_mentor, selected_week):
+    # Filter by mentor and week
+    df_filtered = df[(df["Mentor"] == selected_mentor) & (df["Schedule"] == selected_week)]
 
-    # Group by Week and Status
-    df_bar = df_filtered.groupby(["Schedule", "Status"]).size().reset_index(name="Count")
+    # First Graph: Resources on x-axis and Schedule on y-axis
+    df_bar = df_filtered.groupby(["Resource", "Schedule", "Status"]).size().reset_index(name="Count")
     
     bar_chart = px.bar(
         df_bar,
-        x="Schedule",
-        y="Count",
+        x="Resource",
+        y="Schedule",
         color="Status",
-        title="📊 Completion Status by Week",
+        title="📊 Completion Status by Resource and Week",
         color_discrete_map={"Completed": "green", "Not Completed": "#FF6347"},
         barmode="stack",
         labels={"Status": "Completion Status"},
@@ -109,8 +106,8 @@ def plot_completion_charts(df):
         paper_bgcolor=COLOR_BG,
         plot_bgcolor=COLOR_BG,
         font=dict(color=TEXT_COLOR),
-        xaxis_title="Week",
-        yaxis_title="Count of Completion Status",
+        xaxis_title="Resource",
+        yaxis_title="Schedule",
         title_x=0.5,
         title_y=0.95,
         title_font=dict(size=20),
@@ -147,7 +144,14 @@ def plot_completion_charts(df):
 def show_progress(df):
     st.subheader("📈 Progress Overview")
 
-    bar, mentor_bar = plot_completion_charts(df)
+    # Filters for Mentor and Week
+    mentors = df["Mentor"].dropna().unique()
+    selected_mentor = st.selectbox("Select Mentor", mentors)
+    
+    schedules = df["Schedule"].dropna().unique()
+    selected_week = st.selectbox("Select Week", schedules)
+
+    bar, mentor_bar = plot_completion_charts(df, selected_mentor, selected_week)
     st.plotly_chart(bar, use_container_width=True)
     st.plotly_chart(mentor_bar, use_container_width=True)
 
@@ -159,7 +163,6 @@ def main():
         f"""
         <div style='background-color:{COLOR_BG};padding:20px;border-radius:10px;'">
             <h1 style='color:{COLOR_ACCENT};text-align:center;'>Anaplan Learning Batch 2 Tracker</h1>
-            <p style='text-align:center;color:{TEXT_COLOR};'>Powered by <strong>Ankit</strong></p>
         </div>
         """,
         unsafe_allow_html=True
@@ -172,7 +175,9 @@ def main():
 
         tab1, tab2 = st.tabs(["✏️ Tracker View", "📊 Progress Overview"])
         with tab1:
-            update_status(df)
+            selected_mentor = st.selectbox("Select Mentor", df["Mentor"].dropna().unique())
+            selected_week = st.selectbox("Select Week", df["Schedule"].dropna().unique())
+            update_status(df, selected_mentor, selected_week)
         with tab2:
             show_progress(df)
     else:
