@@ -61,8 +61,8 @@ def logout_button():
         st.session_state.logged_in = False
         # Clear all session state data related to the app (this may be necessary if there are cached states)
         st.session_state.clear()  
-        # Optionally reset the entire page
-        st.experimental_rerun()
+        # Refresh the page by just resetting the session state, without using st.experimental_rerun()
+        st.stop()
 
 # === Update tracker (Read-only view) ===
 def update_status(df, selected_mentor, selected_week):
@@ -157,16 +157,7 @@ def show_progress(df):
 def main():
     st.set_page_config(page_title="Anaplan Batch 2 Tracker", layout="wide")
 
-    # Adding a logo above the title (using the provided URL)
-    st.markdown(
-        f"""
-        <div style='text-align:center;'>
-            <img src='https://rb.gy/ilooum' width='200'/>
-            <h1 style='color:{COLOR_ACCENT};text-align:center;'>Anaplan Learning Batch 2 Tracker</h1>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    # Removed logo part as requested
 
     user, role = login()  # Fixed the syntax here
     if user and role == "admin":
